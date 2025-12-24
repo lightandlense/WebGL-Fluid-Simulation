@@ -1679,4 +1679,63 @@ hands.onResults((results) => {
         // but since we are overriding, we ensure it's marked as moved
         fluidPointer.moved = fluidPointer.down;
     }
+})
+    
+    // 1. Setup global variables for MediaPipe
+const videoElement = document.getElementById('webcam');
+
+// 2. Wait for the simulation to be ready
+window.addEventListener('load', () => {
+    const hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+
+    hands.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+        onFrame: async () => {
+            await hands.send({image: videoElement});
+        },
+        width: 1280,
+        height: 720
+    });
+    camera.start();
 });
+
+function onResults(results) {
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+        
+        // Use the index finger (8) and thumb (4)
+        const index = landmarks[8];
+        const thumb = landmarks[4];
+
+        // Access Pavel's pointer (it's globally available in his script.js)
+        const p = pointers[0];
+
+        // Map coordinates + Mirroring
+        p.x = (1 - index.x) * canvas.width; 
+        p.y = index.y * canvas.height;
+
+        // Pinch logic (distance between index and thumb)
+        const dx = index.x - thumb.x;
+        const dy = index.y - thumb.y;
+        const distance = Math.sqrt(dx*dx + dy*dy);
+
+        if (distance < 0.05) {
+            p.down = true;
+        } else {
+            p.down = false;
+        }
+        
+        // Force the simulation to acknowledge movement
+        p.moved = true;
+    }
+};
