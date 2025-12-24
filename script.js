@@ -1643,4 +1643,40 @@ function hashCode (s) {
         hash |= 0; // Convert to 32bit integer
     }
     return hash;
-};
+}
+
+// Reference the existing pointer from the simulation
+const fluidPointer = pointers[0];
+
+hands.onResults((results) => {
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const hand = results.multiHandLandmarks[0];
+        
+        // Index Finger Tip (8) and Thumb Tip (4)
+        const index = hand[8];
+        const thumb = hand[4];
+
+        // 1. Map coordinates (Mirroring X for natural feel)
+        // We use canvas.width/height to match the simulation's scale
+        fluidPointer.x = (1 - index.x) * canvas.width;
+        fluidPointer.y = index.y * canvas.height;
+
+        // 2. Pinch Detection (Distance between 4 and 8)
+        const dx = index.x - thumb.x;
+        const dy = index.y - thumb.y;
+        const distance = Math.sqrt(dx*dx + dy*dy);
+
+        // 3. Update the simulation state
+        // In the original code, 'down' triggers the fluid splat
+        if (distance < 0.05) { 
+            fluidPointer.down = true;
+        } else {
+            fluidPointer.down = false;
+        }
+        
+        // 4. Update movement delta (required for the "push" effect)
+        // The simulation usually calculates this automatically, 
+        // but since we are overriding, we ensure it's marked as moved
+        fluidPointer.moved = fluidPointer.down;
+    }
+});
