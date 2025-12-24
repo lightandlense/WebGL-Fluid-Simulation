@@ -193,8 +193,13 @@
             ga('send', 'pageview');
         </script>
         <script async src="https://www.google-analytics.com/analytics.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+        
     </head>
     <body>
+        <video id="webcam" style="display:none;" autoplay playsinline></video>
         <canvas></canvas>
 
         <!-- Mother of God, pls forgive me -->
