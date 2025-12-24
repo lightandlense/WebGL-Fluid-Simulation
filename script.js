@@ -1738,4 +1738,64 @@ function onResults(results) {
         // Force the simulation to acknowledge movement
         p.moved = true;
     }
+
+    import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
+
+let handLandmarker;
+const video = document.getElementById("webcam");
+
+// 1. Initialize the hand landmarker
+const createHandLandmarker = async () => {
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+  );
+  handLandmarker = await HandLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+      delegate: "GPU"
+    },
+    runningMode: "VIDEO",
+    numHands: 1
+  });
+  startCamera();
+};
+
+// 2. Start the webcam and begin detection
+const startCamera = () => {
+  navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+    video.srcObject = stream;
+    video.addEventListener("loadeddata", predictWebcam);
+  });
+};
+
+// 3. Link detection results to the Fluid Simulation
+async function predictWebcam() {
+  let startTimeMs = performance.now();
+  if (handLandmarker) {
+    const results = handLandmarker.detectForVideo(video, startTimeMs);
+    
+    if (results.landmarks && results.landmarks.length > 0) {
+      const landmarks = results.landmarks[0];
+      const indexTip = landmarks[8]; // Index Finger
+      const thumbTip = landmarks[4]; // Thumb
+
+      // Access the fluid pointer (pointers[0] is Pavel's default)
+      const p = pointers[0];
+      p.x = (1 - indexTip.x) * window.innerWidth; // Mirror X
+      p.y = indexTip.y * window.innerHeight;
+
+      // Pinch Gesture Detection
+      const distance = Math.sqrt(
+        Math.pow(indexTip.x - thumbTip.x, 2) + 
+        Math.pow(indexTip.y - thumbTip.y, 2)
+      );
+
+      p.down = distance < 0.05; // "Click and Hold" if pinching
+      p.moved = true;
+    }
+  }
+  window.requestAnimationFrame(predictWebcam);
+}
+
+createHandLandmarker();
 };
